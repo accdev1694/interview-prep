@@ -1,0 +1,11 @@
+crewai
+openai
+python-dotenv
+pydantic
+streamlit
+langchain
+langchain-openai
+requests
+beautifulsoup4
+selenium
+pandas
