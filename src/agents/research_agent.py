@@ -1,6 +1,7 @@
 from crewai import Agent
 from dotenv import load_dotenv
 from ..tools.web_search_tool import search_company_info
+from ..tools.job_description_analyzer import analyze_job_description
 
 load_dotenv()
 
@@ -12,5 +13,5 @@ research_agent = Agent(
     You help interview candidates prepare by providing deep insights.""",
     verbose=True,
     allow_delegation=False,
-    tools=[search_company_info]
+    tools=[search_company_info, analyze_job_description]
 )
