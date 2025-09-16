@@ -1,3 +1,4 @@
+import random
 from src.crews.simulation_crew import simulation_crew
 from src.config.config import load_interview_config
 
@@ -5,6 +6,20 @@ class SimulationManager:
     def __init__(self):
         self.config = load_interview_config()
         self.interview_finished = False
+        self.interviewers = self.config["interviewers"]
+        self.current_interviewer_index = 0
+
+    def get_current_interviewer(self):
+        """
+        Gets the current interviewer based on the round-robin index.
+        """
+        return self.interviewers[self.current_interviewer_index]
+
+    def next_interviewer(self):
+        """
+        Moves to the next interviewer in a round-robin fashion.
+        """
+        self.current_interviewer_index = (self.current_interviewer_index + 1) % len(self.interviewers)
 
     def start_simulation(self):
         """
@@ -18,7 +33,7 @@ class SimulationManager:
         inputs = {
             "company_name": self.config["company_name"],
             "job_role": self.config["job_role"],
-            "interviewers": self.config["interviewers"],
+            "interviewers": self.interviewers,
             "job_description": self.config["job_description"]
         }
 
@@ -29,7 +44,8 @@ class SimulationManager:
         # Note: This is a conceptual step. The actual implementation will depend on how the crew is designed to be interactive.
         # For now, we will mock this behavior.
         
-        print("AI Interviewer: Hello, thank you for coming in today. Let's start with a few questions.")
+        current_interviewer = self.get_current_interviewer()
+        print(f"{current_interviewer['name']} ({current_interviewer['role']}): Hello, thank you for coming in today. Let's start with a few questions.")
 
         while not self.interview_finished:
             user_response = input("Your Answer: ")
@@ -44,7 +60,9 @@ class SimulationManager:
             # The crew would then process the response and generate a follow-up question.
             
             # For now, we'll just simulate a generic follow-up.
-            print("AI Interviewer: Thank you for that response. My next question is...")
+            self.next_interviewer()
+            current_interviewer = self.get_current_interviewer()
+            print(f"{current_interviewer['name']} ({current_interviewer['role']}): Thank you for that response. My next question is...")
 
 
 if __name__ == '__main__':
