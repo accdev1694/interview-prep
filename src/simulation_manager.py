@@ -2,6 +2,7 @@ import random
 from src.crews.simulation_crew import simulation_crew
 from src.config.config import load_interview_config
 from src.agents.feedback_analyst import feedback_analyst_agent
+from src.agents.question_generator import question_generator_agent
 from crewai import Task, Crew
 
 class SimulationManager:
@@ -10,9 +11,16 @@ class SimulationManager:
         self.interview_finished = False
         self.interviewers = self.config["interviewers"]
         self.current_interviewer_index = 0
+        self.questions = []
+        self.current_question_index = 0
         self.feedback_crew = Crew(
             agents=[feedback_analyst_agent],
             tasks=[],  # Tasks will be created dynamically
+            verbose=2
+        )
+        self.question_crew = Crew(
+            agents=[question_generator_agent],
+            tasks=[], # Dynamic tasks
             verbose=2
         )
 
@@ -28,6 +36,41 @@ class SimulationManager:
         """
         self.current_interviewer_index = (self.current_interviewer_index + 1) % len(self.interviewers)
 
+    def _generate_questions(self):
+        """
+        Generates a list of interview questions using the question generation crew.
+        """
+        print("Generating interview questions...")
+        question_gen_task = Task(
+            description=f"""
+                Generate a list of 10 interview questions based on the following details:
+                - Company: {self.config['company_name']}
+                - Job Role: {self.config['job_role']}
+                - Job Description: {self.config['job_description']}
+                - Interviewers: {self.config['interviewers']}
+
+                The questions should be diverse, covering technical, behavioral, and situational topics.
+                Return ONLY the list of questions, nothing else.
+            """,
+            agent=question_generator_agent,
+            expected_output="A python list of 10 string questions."
+        )
+        self.question_crew.tasks = [question_gen_task]
+        question_list_str = self.question_crew.kickoff()
+        
+        # The output might be a string representation of a list, so we need to parse it.
+        try:
+            # A simple eval is risky, but for this controlled environment it's a quick solution.
+            # A safer method would be ast.literal_eval.
+            import ast
+            self.questions = ast.literal_eval(question_list_str)
+            print("Questions generated successfully.")
+        except (ValueError, SyntaxError):
+            print("Error parsing the generated questions. Using fallback questions.")
+            # Fallback to a simpler split if eval fails
+            self.questions = [q.strip() for q in question_list_str.split('\n') if q.strip()]
+
+
     def start_simulation(self):
         """
         Starts and manages the interactive interview simulation.
@@ -35,6 +78,12 @@ class SimulationManager:
         print("🚀 Starting Interview Simulation...")
         print("Type 'quit' at any time to end the interview.")
         print("-" * 50)
+
+        self._generate_questions()
+
+        if not self.questions:
+            print("Could not generate questions. Aborting simulation.")
+            return
 
         # Initial context for the simulation crew
         inputs = {
@@ -54,11 +103,10 @@ class SimulationManager:
         current_interviewer = self.get_current_interviewer()
         print(f"{current_interviewer['name']} ({current_interviewer['role']}): Hello, thank you for coming in today. Let's start with a few questions.")
         
-        # Simulate asking a question
-        current_question = "Can you tell me about a challenging project you've worked on?"
-        print(f"Question: {current_question}")
-
-        while not self.interview_finished:
+        while not self.interview_finished and self.current_question_index < len(self.questions):
+            current_question = self.questions[self.current_question_index]
+            print(f"\nQuestion: {current_question}")
+            
             user_response = input("Your Answer: ")
 
             if user_response.lower() == 'quit':
@@ -80,16 +128,16 @@ class SimulationManager:
             print(feedback_result)
             print("-" * 50 + "\n")
 
-            # Here, we would send the user's response back to the crew and get the next question.
-            # For example: result = simulation_crew.kickoff(inputs={'user_response': user_response})
-            # The crew would then process the response and generate a follow-up question.
-            
-            # For now, we'll just simulate a generic follow-up.
+            self.current_question_index += 1
+            if self.current_question_index >= len(self.questions):
+                self.interview_finished = True
+                print("AI Interviewer: That was the last question. Thank you for your time.")
+                continue
+
+            # Move to the next interviewer for the next question
             self.next_interviewer()
             current_interviewer = self.get_current_interviewer()
-            # Simulate asking a new question
-            current_question = "What are your biggest strengths?" # This should be dynamically generated
-            print(f"{current_interviewer['name']} ({current_interviewer['role']}): Thank you for that response. My next question is: {current_question}")
+            print(f"{current_interviewer['name']} ({current_interviewer['role']}): Thank you for that response. Let's move to the next question.")
 
 
 if __name__ == '__main__':
