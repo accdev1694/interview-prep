@@ -4,6 +4,7 @@ from src.config.config import load_interview_config
 from src.agents.feedback_analyst import feedback_analyst_agent
 from src.agents.question_generator import question_generator_agent
 from src.agents.performance_analysis_agent import performance_analysis_agent
+from src.agents.improvement_recommender_agent import improvement_recommender_agent
 from crewai import Task, Crew
 
 class SimulationManager:
@@ -27,6 +28,11 @@ class SimulationManager:
         )
         self.performance_crew = Crew(
             agents=[performance_analysis_agent],
+            tasks=[], # Dynamic tasks
+            verbose=2
+        )
+        self.recommendation_crew = Crew(
+            agents=[improvement_recommender_agent],
             tasks=[], # Dynamic tasks
             verbose=2
         )
@@ -172,6 +178,27 @@ class SimulationManager:
         final_summary = self.performance_crew.kickoff()
 
         print(final_summary)
+        print("=" * 70)
+
+        self._run_improvement_recommendations(final_summary)
+
+    def _run_improvement_recommendations(self, performance_summary: str):
+        """
+        Runs the improvement recommendation crew based on the performance summary.
+        """
+        print("\n" + "💡" * 20 + " PERSONALIZED RECOMMENDATIONS " + "💡" * 20)
+
+        recommendation_task = Task(
+            description="Based on the provided performance summary, generate a list of personalized, actionable recommendations for the user to improve their interview skills.",
+            agent=improvement_recommender_agent,
+            expected_output="A list of specific, actionable recommendations.",
+            inputs={'performance_summary': performance_summary}
+        )
+
+        self.recommendation_crew.tasks = [recommendation_task]
+        recommendations = self.recommendation_crew.kickoff()
+
+        print(recommendations)
         print("=" * 70)
 
 
