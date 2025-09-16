@@ -1,4 +1,5 @@
 from crewai import Agent
+from ..tools.personality_simulator_tool import personality_simulator_tool
 
 simulation_conductor = Agent(
     role="Simulation Conductor",
@@ -9,6 +10,7 @@ simulation_conductor = Agent(
         "interview flow, manage the panel of AI interviewers, and ensure the simulation "
         "runs smoothly from start to finish."
     ),
+    tools=[personality_simulator_tool],
     allow_delegation=False,
     verbose=True
 )
