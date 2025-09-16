@@ -46,6 +46,24 @@ def main():
         st.rerun()
 
     if st.button("Start Interview Simulation"):
+        # --- Validation Step ---
+        error = False
+        if not job_description or job_description == "As a Software Engineer at Google, you will...":
+            st.error("Please provide a detailed job description.")
+            error = True
+        
+        if not st.session_state.interviewers:
+            st.error("Please add at least one interviewer.")
+            error = True
+        else:
+            for i, interviewer in enumerate(st.session_state.interviewers):
+                if not interviewer['name'] or not interviewer['role'] or not interviewer['linkedin']:
+                    st.error(f"Please fill in all fields for Interviewer {i+1}.")
+                    error = True
+        
+        if error:
+            return # Stop execution if there are validation errors
+
         # 1. Save the configuration
         config_data = {
             "company_name": company_name,
@@ -84,9 +102,14 @@ def main():
             with st.spinner("Thinking..."):
                 response_generator = st.session_state.manager.ask_next_question(prompt)
                 for response_part in response_generator:
-                    st.session_state.messages.append({"role": "assistant", "content": response_part})
-                    with st.chat_message("assistant"):
-                        st.markdown(response_part)
+                    # Check for errors from the backend
+                    if response_part.get("type") == "error":
+                        st.error(response_part["content"])
+                    else:
+                        # Append the actual content to messages
+                        st.session_state.messages.append({"role": "assistant", "content": response_part["content"]})
+                        with st.chat_message("assistant"):
+                            st.markdown(response_part["content"])
             st.rerun()
 
 
