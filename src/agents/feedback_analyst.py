@@ -1,4 +1,7 @@
 from crewai import Agent
+from src.tools.response_evaluator_tool import ResponseEvaluatorTool
+
+response_evaluator_tool = ResponseEvaluatorTool()
 
 feedback_analyst_agent = Agent(
     role="Feedback Analyst Agent",
@@ -8,6 +11,7 @@ feedback_analyst_agent = Agent(
         "identifying strengths and weaknesses in a candidate's responses. You can "
         "provide actionable feedback to help users improve their interviewing skills."
     ),
+    tools=[response_evaluator_tool],
     allow_delegation=False,
     verbose=True
 )

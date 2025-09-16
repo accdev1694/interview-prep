@@ -1,6 +1,8 @@
 import random
 from src.crews.simulation_crew import simulation_crew
 from src.config.config import load_interview_config
+from src.agents.feedback_analyst import feedback_analyst_agent
+from crewai import Task, Crew
 
 class SimulationManager:
     def __init__(self):
@@ -8,6 +10,11 @@ class SimulationManager:
         self.interview_finished = False
         self.interviewers = self.config["interviewers"]
         self.current_interviewer_index = 0
+        self.feedback_crew = Crew(
+            agents=[feedback_analyst_agent],
+            tasks=[],  # Tasks will be created dynamically
+            verbose=2
+        )
 
     def get_current_interviewer(self):
         """
@@ -46,6 +53,10 @@ class SimulationManager:
         
         current_interviewer = self.get_current_interviewer()
         print(f"{current_interviewer['name']} ({current_interviewer['role']}): Hello, thank you for coming in today. Let's start with a few questions.")
+        
+        # Simulate asking a question
+        current_question = "Can you tell me about a challenging project you've worked on?"
+        print(f"Question: {current_question}")
 
         while not self.interview_finished:
             user_response = input("Your Answer: ")
@@ -55,6 +66,20 @@ class SimulationManager:
                 print("AI Interviewer: Thank you for your time. The interview has now concluded.")
                 continue
 
+            # Create and run the feedback task
+            feedback_task = Task(
+                description=f"Evaluate the user's answer to the question: '{current_question}'. The user's answer is: '{user_response}'",
+                agent=feedback_analyst_agent,
+                expected_output="Constructive feedback on the user's response."
+            )
+
+            self.feedback_crew.tasks = [feedback_task]
+            feedback_result = self.feedback_crew.kickoff()
+
+            print("\n" + "-"*20 + " FEEDBACK " + "-"*20)
+            print(feedback_result)
+            print("-" * 50 + "\n")
+
             # Here, we would send the user's response back to the crew and get the next question.
             # For example: result = simulation_crew.kickoff(inputs={'user_response': user_response})
             # The crew would then process the response and generate a follow-up question.
@@ -62,7 +87,9 @@ class SimulationManager:
             # For now, we'll just simulate a generic follow-up.
             self.next_interviewer()
             current_interviewer = self.get_current_interviewer()
-            print(f"{current_interviewer['name']} ({current_interviewer['role']}): Thank you for that response. My next question is...")
+            # Simulate asking a new question
+            current_question = "What are your biggest strengths?" # This should be dynamically generated
+            print(f"{current_interviewer['name']} ({current_interviewer['role']}): Thank you for that response. My next question is: {current_question}")
 
 
 if __name__ == '__main__':
