@@ -1,5 +1,12 @@
 from crewai import Agent
 from src.tools.resource_finder_tool import ResourceFinderTool
+from langchain_google_genai import ChatGoogleGenerativeAI
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+llm = ChatGoogleGenerativeAI(model="gemini-pro", google_api_key=os.getenv("GOOGLE_API_KEY"))
 
 resource_finder_tool = ResourceFinderTool()
 
@@ -14,5 +21,6 @@ learning_path_agent = Agent(
     ),
     tools=[resource_finder_tool],
     allow_delegation=False,
-    verbose=True
+    verbose=True,
+    llm=llm
 )

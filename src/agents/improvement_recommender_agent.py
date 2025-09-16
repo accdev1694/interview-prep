@@ -1,5 +1,12 @@
 from crewai import Agent
 from src.tools.skill_gap_analyzer_tool import SkillGapAnalyzerTool
+from langchain_google_genai import ChatGoogleGenerativeAI
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+llm = ChatGoogleGenerativeAI(model="gemini-pro", google_api_key=os.getenv("GOOGLE_API_KEY"))
 
 skill_gap_analyzer_tool = SkillGapAnalyzerTool()
 
@@ -14,5 +21,6 @@ improvement_recommender_agent = Agent(
     ),
     tools=[skill_gap_analyzer_tool],
     allow_delegation=False,
-    verbose=True
+    verbose=True,
+    llm=llm
 )

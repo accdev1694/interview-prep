@@ -10,3 +10,4 @@ beautifulsoup4
 selenium
 pandas
 crewai_tools
+langchain-google-genai

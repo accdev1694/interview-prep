@@ -1,5 +1,12 @@
 from crewai import Agent
 from src.tools.report_generator_tool import ReportGeneratorTool
+from langchain_google_genai import ChatGoogleGenerativeAI
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+llm = ChatGoogleGenerativeAI(model="gemini-pro", google_api_key=os.getenv("GOOGLE_API_KEY"))
 
 report_generator_tool = ReportGeneratorTool()
 
@@ -14,5 +21,6 @@ reporting_agent = Agent(
     ),
     tools=[report_generator_tool],
     allow_delegation=False,
-    verbose=True
+    verbose=True,
+    llm=llm
 )

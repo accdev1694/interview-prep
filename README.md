@@ -28,12 +28,14 @@ This project is a sophisticated, multi-agent AI system designed to help users pr
 ### Setup Instructions
 
 1.  **Clone the repository:**
+
     ```bash
     git clone https://github.com/accdev1694/interview-prep.git
     cd interview-prep
     ```
 
 2.  **Create and activate a virtual environment:**
+
     ```bash
     # For Windows
     python -m venv venv
@@ -45,6 +47,7 @@ This project is a sophisticated, multi-agent AI system designed to help users pr
     ```
 
 3.  **Install the required dependencies:**
+
     ```bash
     pip install -r requirements.txt
     ```
@@ -54,13 +57,15 @@ This project is a sophisticated, multi-agent AI system designed to help users pr
     - Add your API keys for the language models you intend to use. For example:
       ```
       OPENAI_API_KEY="your_openai_api_key"
-      TAVILY_API_KEY="your_tavily_api_key" 
+      GOOGLE_API_KEY="your_google_api_key"
+      TAVILY_API_KEY="your_tavily_api_key"
       ```
-    *Note: The application uses Tavily for web searches in the learning path generation.*
+      _Note: The application uses Tavily for web searches in the learning path generation._
 
 ### Running the Application
 
 1.  **Start the Streamlit application:**
+
     ```bash
     streamlit run app.py
     ```
@@ -68,6 +73,7 @@ This project is a sophisticated, multi-agent AI system designed to help users pr
 2.  **Open your web browser** and navigate to the local URL provided by Streamlit (usually `http://localhost:8501`).
 
 3.  **Configure your interview:**
+
     - Fill in the Company Name, Job Role, and a detailed Job Description.
     - Add or remove interviewer profiles as needed, providing their name, role, and a LinkedIn URL for persona simulation.
 
@@ -89,4 +95,3 @@ This project is a sophisticated, multi-agent AI system designed to help users pr
 ├── README.md           # This file
 └── .env                # For API keys (not included in git)
 ```
-

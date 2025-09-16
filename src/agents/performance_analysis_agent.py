@@ -1,5 +1,12 @@
 from crewai import Agent
 from src.tools.transcript_analyzer_tool import TranscriptAnalyzerTool
+from langchain_google_genai import ChatGoogleGenerativeAI
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+llm = ChatGoogleGenerativeAI(model="gemini-pro", google_api_key=os.getenv("GOOGLE_API_KEY"))
 
 transcript_analyzer_tool = TranscriptAnalyzerTool()
 
@@ -14,5 +21,6 @@ performance_analysis_agent = Agent(
     ),
     tools=[transcript_analyzer_tool],
     allow_delegation=False,
-    verbose=True
+    verbose=True,
+    llm=llm
 )
