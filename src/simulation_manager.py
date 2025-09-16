@@ -3,6 +3,7 @@ from src.crews.simulation_crew import simulation_crew
 from src.config.config import load_interview_config
 from src.agents.feedback_analyst import feedback_analyst_agent
 from src.agents.question_generator import question_generator_agent
+from src.agents.performance_analysis_agent import performance_analysis_agent
 from crewai import Task, Crew
 
 class SimulationManager:
@@ -13,6 +14,7 @@ class SimulationManager:
         self.current_interviewer_index = 0
         self.questions = []
         self.current_question_index = 0
+        self.transcript = []
         self.feedback_crew = Crew(
             agents=[feedback_analyst_agent],
             tasks=[],  # Tasks will be created dynamically
@@ -20,6 +22,11 @@ class SimulationManager:
         )
         self.question_crew = Crew(
             agents=[question_generator_agent],
+            tasks=[], # Dynamic tasks
+            verbose=2
+        )
+        self.performance_crew = Crew(
+            agents=[performance_analysis_agent],
             tasks=[], # Dynamic tasks
             verbose=2
         )
@@ -114,6 +121,9 @@ class SimulationManager:
                 print("AI Interviewer: Thank you for your time. The interview has now concluded.")
                 continue
 
+            # Store the interaction in the transcript
+            self.transcript.append({"question": current_question, "answer": user_response})
+
             # Create and run the feedback task
             feedback_task = Task(
                 description=f"Evaluate the user's answer to the question: '{current_question}'. The user's answer is: '{user_response}'",
@@ -138,6 +148,31 @@ class SimulationManager:
             self.next_interviewer()
             current_interviewer = self.get_current_interviewer()
             print(f"{current_interviewer['name']} ({current_interviewer['role']}): Thank you for that response. Let's move to the next question.")
+
+        self._run_performance_analysis()
+
+    def _run_performance_analysis(self):
+        """
+        Runs the performance analysis crew on the full interview transcript.
+        """
+        if not self.transcript:
+            print("\nNo transcript was recorded. Skipping performance analysis.")
+            return
+
+        print("\n" + "="*20 + " FINAL PERFORMANCE ANALYSIS " + "="*20)
+        
+        analysis_task = Task(
+            description="Analyze the provided interview transcript and give a holistic summary of the user's performance. Identify strengths, weaknesses, and provide actionable recommendations for improvement.",
+            agent=performance_analysis_agent,
+            expected_output="A comprehensive performance review.",
+            inputs={'transcript': self.transcript}
+        )
+
+        self.performance_crew.tasks = [analysis_task]
+        final_summary = self.performance_crew.kickoff()
+
+        print(final_summary)
+        print("=" * 70)
 
 
 if __name__ == '__main__':
