@@ -5,6 +5,7 @@ from src.agents.feedback_analyst import feedback_analyst_agent
 from src.agents.question_generator import question_generator_agent
 from src.agents.performance_analysis_agent import performance_analysis_agent
 from src.agents.improvement_recommender_agent import improvement_recommender_agent
+from src.agents.progress_tracker_agent import progress_tracker_agent
 from crewai import Task, Crew
 
 class SimulationManager:
@@ -33,6 +34,11 @@ class SimulationManager:
         )
         self.recommendation_crew = Crew(
             agents=[improvement_recommender_agent],
+            tasks=[], # Dynamic tasks
+            verbose=2
+        )
+        self.progress_tracker_crew = Crew(
+            agents=[progress_tracker_agent],
             tasks=[], # Dynamic tasks
             verbose=2
         )
@@ -199,6 +205,30 @@ class SimulationManager:
         recommendations = self.recommendation_crew.kickoff()
 
         print(recommendations)
+        print("=" * 70)
+
+        self._save_session(performance_summary, recommendations)
+
+    def _save_session(self, performance_summary: str, recommendations: str):
+        """
+        Saves the complete interview session report to a file.
+        """
+        print("\n" + "💾" * 20 + " SAVING SESSION " + "💾" * 20)
+
+        saving_task = Task(
+            description="Save the interview session summary and recommendations to a file.",
+            agent=progress_tracker_agent,
+            expected_output="A confirmation message indicating the file path.",
+            inputs={
+                'performance_summary': performance_summary,
+                'recommendations': recommendations
+            }
+        )
+
+        self.progress_tracker_crew.tasks = [saving_task]
+        save_result = self.progress_tracker_crew.kickoff()
+
+        print(save_result)
         print("=" * 70)
 
 
