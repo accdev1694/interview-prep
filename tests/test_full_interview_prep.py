@@ -1,5 +1,5 @@
 from src.crews.interview_prep_crew import interview_prep_crew
-from config import load_interview_config
+from src.config.config import load_interview_config
 
 print("🚀 Starting comprehensive interview preparation...")
 print("This will take 2-3 minutes as all agents work together...")
