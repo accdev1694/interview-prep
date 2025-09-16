@@ -6,6 +6,7 @@ from src.agents.question_generator import question_generator_agent
 from src.agents.performance_analysis_agent import performance_analysis_agent
 from src.agents.improvement_recommender_agent import improvement_recommender_agent
 from src.agents.reporting_agent import reporting_agent
+from src.agents.learning_path_agent import learning_path_agent
 from crewai import Task, Crew
 
 class SimulationManager:
@@ -39,6 +40,11 @@ class SimulationManager:
         )
         self.reporting_crew = Crew(
             agents=[reporting_agent],
+            tasks=[], # Dynamic tasks
+            verbose=2
+        )
+        self.learning_path_crew = Crew(
+            agents=[learning_path_agent],
             tasks=[], # Dynamic tasks
             verbose=2
         )
@@ -207,7 +213,8 @@ class SimulationManager:
         print(recommendations)
         print("=" * 70)
 
-        self._generate_report(final_summary, recommendations)
+        self._generate_report(performance_summary, recommendations)
+        self._generate_learning_path(recommendations)
 
     def _generate_report(self, performance_summary: str, recommendations: str):
         """
@@ -230,6 +237,25 @@ class SimulationManager:
         report_result = self.reporting_crew.kickoff()
 
         print(report_result)
+        print("=" * 70)
+
+    def _generate_learning_path(self, recommendations: str):
+        """
+        Generates a learning path with resources based on the recommendations.
+        """
+        print("\n" + "📚" * 20 + " CUSTOMIZED LEARNING PATH " + "📚" * 20)
+
+        learning_path_task = Task(
+            description="Based on the provided improvement recommendations, find relevant articles and videos to create a personalized learning path.",
+            agent=learning_path_agent,
+            expected_output="A markdown-formatted learning path with links to resources.",
+            inputs={'recommendations': recommendations}
+        )
+
+        self.learning_path_crew.tasks = [learning_path_task]
+        learning_path = self.learning_path_crew.kickoff()
+
+        print(learning_path)
         print("=" * 70)
 
 
