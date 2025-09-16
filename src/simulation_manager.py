@@ -2,7 +2,7 @@ import random
 from src.crews.simulation_crew import simulation_crew
 from src.config.config import load_interview_config
 from src.agents.feedback_analyst import feedback_analyst_agent
-from src.agents.question_generator import question_generator_agent
+from src.agents.question_generator import question_generator as question_generator_agent
 from src.agents.performance_analysis_agent import performance_analysis_agent
 from src.agents.improvement_recommender_agent import improvement_recommender_agent
 from src.agents.reporting_agent import reporting_agent
@@ -96,134 +96,104 @@ class SimulationManager:
             self.questions = [q.strip() for q in question_list_str.split('\n') if q.strip()]
 
 
-    def start_simulation(self):
+    def start_simulation(self, on_question, on_feedback, on_finish):
         """
-        Starts and manages the interactive interview simulation.
+        Starts and manages the interactive interview simulation, using callbacks for UI updates.
         """
         print("🚀 Starting Interview Simulation...")
-        print("Type 'quit' at any time to end the interview.")
-        print("-" * 50)
+        on_finish("🚀 Starting Interview Simulation...")
 
         self._generate_questions()
 
         if not self.questions:
-            print("Could not generate questions. Aborting simulation.")
+            on_finish("Could not generate questions. Aborting simulation.")
             return
 
-        # Initial context for the simulation crew
-        inputs = {
-            "company_name": self.config["company_name"],
-            "job_role": self.config["job_role"],
-            "interviewers": self.interviewers,
-            "job_description": self.config["job_description"]
-        }
-
-        # This is a simplified loop. In a real scenario, the crew's tasks would generate questions.
-        # For now, we'll simulate the flow.
-        
-        # Kick off the crew to get the first question (or introduction)
-        # Note: This is a conceptual step. The actual implementation will depend on how the crew is designed to be interactive.
-        # For now, we will mock this behavior.
-        
         current_interviewer = self.get_current_interviewer()
-        print(f"{current_interviewer['name']} ({current_interviewer['role']}): Hello, thank you for coming in today. Let's start with a few questions.")
-        
-        while not self.interview_finished and self.current_question_index < len(self.questions):
-            current_question = self.questions[self.current_question_index]
-            print(f"\nQuestion: {current_question}")
+        intro_message = f"{current_interviewer['name']} ({current_interviewer['role']}): Hello, thank you for coming in today. Let's start with a few questions."
+        on_question(intro_message, is_intro=True)
+
+    def ask_next_question(self, user_response=None):
+        """
+        Asks the next question or provides feedback based on the user's response.
+        """
+        if user_response:
+            # Provide feedback on the previous answer
+            last_question = self.questions[self.current_question_index -1]
+            self.transcript.append({"question": last_question, "answer": user_response})
             
-            user_response = input("Your Answer: ")
-
-            if user_response.lower() == 'quit':
-                self.interview_finished = True
-                print("AI Interviewer: Thank you for your time. The interview has now concluded.")
-                continue
-
-            # Store the interaction in the transcript
-            self.transcript.append({"question": current_question, "answer": user_response})
-
-            # Create and run the feedback task
             feedback_task = Task(
-                description=f"Evaluate the user's answer to the question: '{current_question}'. The user's answer is: '{user_response}'",
+                description=f"Evaluate the user's answer to the question: '{last_question}'. The user's answer is: '{user_response}'",
                 agent=feedback_analyst_agent,
                 expected_output="Constructive feedback on the user's response."
             )
-
             self.feedback_crew.tasks = [feedback_task]
             feedback_result = self.feedback_crew.kickoff()
+            yield {"type": "feedback", "content": f"--- FEEDBACK ---\n{feedback_result}\n"}
 
-            print("\n" + "-"*20 + " FEEDBACK " + "-"*20)
-            print(feedback_result)
-            print("-" * 50 + "\n")
-
+        if self.current_question_index < len(self.questions):
+            current_question = self.questions[self.current_question_index]
             self.current_question_index += 1
-            if self.current_question_index >= len(self.questions):
-                self.interview_finished = True
-                print("AI Interviewer: That was the last question. Thank you for your time.")
-                continue
-
-            # Move to the next interviewer for the next question
-            self.next_interviewer()
+            
             current_interviewer = self.get_current_interviewer()
-            print(f"{current_interviewer['name']} ({current_interviewer['role']}): Thank you for that response. Let's move to the next question.")
+            self.next_interviewer()
+            
+            yield {"type": "question", "content": f"{current_interviewer['name']} ({current_interviewer['role']}): {current_question}"}
+        else:
+            self.interview_finished = True
+            yield {"type": "analysis_started", "content": "AI Interviewer: That was the last question. Thank you for your time. Analyzing your performance..."}
+            
+            # Run post-interview analysis
+            final_summary = self._run_performance_analysis()
+            recommendations = self._run_improvement_recommendations(final_summary)
+            report_result = self._generate_report(final_summary, recommendations)
+            learning_path = self._generate_learning_path(recommendations)
 
-        self._run_performance_analysis()
+            report_path = None
+            if "Report saved to:" in report_result:
+                report_path = report_result.split("Report saved to:")[-1].strip()
+
+            yield {
+                "type": "final_results",
+                "report_path": report_path,
+                "learning_path": learning_path
+            }
 
     def _run_performance_analysis(self):
         """
         Runs the performance analysis crew on the full interview transcript.
         """
         if not self.transcript:
-            print("\nNo transcript was recorded. Skipping performance analysis.")
-            return
+            return "No transcript recorded."
 
-        print("\n" + "="*20 + " FINAL PERFORMANCE ANALYSIS " + "="*20)
-        
         analysis_task = Task(
-            description="Analyze the provided interview transcript and give a holistic summary of the user's performance. Identify strengths, weaknesses, and provide actionable recommendations for improvement.",
+            description="Analyze the provided interview transcript and give a holistic summary of the user's performance.",
             agent=performance_analysis_agent,
             expected_output="A comprehensive performance review.",
             inputs={'transcript': self.transcript}
         )
-
         self.performance_crew.tasks = [analysis_task]
-        final_summary = self.performance_crew.kickoff()
-
-        print(final_summary)
-        print("=" * 70)
-
-        self._run_improvement_recommendations(final_summary)
+        return self.performance_crew.kickoff()
 
     def _run_improvement_recommendations(self, performance_summary: str):
         """
-        Runs the improvement recommendation crew based on the performance summary.
+        Runs the improvement recommendation crew.
         """
-        print("\n" + "💡" * 20 + " PERSONALIZED RECOMMENDATIONS " + "💡" * 20)
-
         recommendation_task = Task(
-            description="Based on the provided performance summary, generate a list of personalized, actionable recommendations for the user to improve their interview skills.",
+            description="Based on the performance summary, generate personalized recommendations.",
             agent=improvement_recommender_agent,
-            expected_output="A list of specific, actionable recommendations.",
+            expected_output="A list of actionable recommendations.",
             inputs={'performance_summary': performance_summary}
         )
-
         self.recommendation_crew.tasks = [recommendation_task]
-        recommendations = self.recommendation_crew.kickoff()
-
-        print(recommendations)
-        print("=" * 70)
-
-        self._generate_report(performance_summary, recommendations)
-        self._generate_learning_path(recommendations)
+        return self.recommendation_crew.kickoff()
 
     def _generate_report(self, performance_summary: str, recommendations: str):
         """
         Generates and saves a detailed interview report.
         """
-        print("\n" + "📊" * 20 + " GENERATING FINAL REPORT " + "📊" * 20)
-
         report_task = Task(
-            description="Generate a comprehensive, well-structured report based on the interview performance summary, recommendations, and full transcript.",
+            description="Generate a comprehensive report based on the summary and recommendations.",
             agent=reporting_agent,
             expected_output="A confirmation message with the path to the saved report file.",
             inputs={
@@ -232,31 +202,21 @@ class SimulationManager:
                 'transcript': self.transcript
             }
         )
-
         self.reporting_crew.tasks = [report_task]
-        report_result = self.reporting_crew.kickoff()
-
-        print(report_result)
-        print("=" * 70)
+        return self.reporting_crew.kickoff()
 
     def _generate_learning_path(self, recommendations: str):
         """
-        Generates a learning path with resources based on the recommendations.
+        Generates a learning path with resources.
         """
-        print("\n" + "📚" * 20 + " CUSTOMIZED LEARNING PATH " + "📚" * 20)
-
         learning_path_task = Task(
-            description="Based on the provided improvement recommendations, find relevant articles and videos to create a personalized learning path.",
+            description="Generate a learning path based on the recommendations.",
             agent=learning_path_agent,
-            expected_output="A markdown-formatted learning path with links to resources.",
+            expected_output="A markdown-formatted learning path.",
             inputs={'recommendations': recommendations}
         )
-
         self.learning_path_crew.tasks = [learning_path_task]
-        learning_path = self.learning_path_crew.kickoff()
-
-        print(learning_path)
-        print("=" * 70)
+        return self.learning_path_crew.kickoff()
 
 
 if __name__ == '__main__':

@@ -1,5 +1,5 @@
-from crewai_tools import BaseTool
-from pydantic.v1 import BaseModel, Field
+from crewai.tools import BaseTool
+from pydantic import BaseModel, Field
 from typing import Type
 
 class ResponseEvaluatorToolSchema(BaseModel):
